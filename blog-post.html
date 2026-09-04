@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | AJA Engineering Consultancy</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<style>
+  .post-wrap { max-width:800px; margin:0 auto; padding:60px 40px; }
+  .post-wrap img.cover { width:100%; max-height:400px; object-fit:cover; border-radius:4px; margin-bottom:24px; }
+  .post-wrap h1 { color:var(--blue); font-size:2rem; margin-bottom:6px; }
+  .post-date { color:#999; font-size:0.9rem; margin-bottom:30px; }
+  .post-body { line-height:1.8; color:#333; }
+  .post-body h2, .post-body h3 { color:var(--blue-dark); }
+  .post-body img { max-width:100%; border-radius:4px; margin:20px 0; }
+  .post-body a { color:var(--blue); }
+  .back-link { display:inline-block; margin-bottom:20px; }
+</style>
+<!-- Google Analytics (GA4) - replace G-XXXXXXXXXX with the real Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <img src="assets/logo.png" alt="AJA Engineering Consultancy logo" class="brand-logo">
+    <div>
+      <div class="brand-text-name">Engineering Consultancy</div>
+      <div class="brand-text-tag">Assuring material reliability</div>
+    </div>
+  </div>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="blog.html" class="active">Blog</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <button class="nav-toggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+</header>
+
+<div class="post-wrap" id="post-wrap">
+  <a class="back-link" href="blog.html">&larr; Back to Blog</a>
+  <div id="post-content">Loading…</div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <img src="assets/logo.png" alt="" class="brand-logo">
+      <div>
+        <div class="footer-brand-name">Engineering Consultancy</div>
+        <div class="footer-brand-tag">Assuring material reliability</div>
+      </div>
+    </div>
+    <div class="social-links">
+      <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="#" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+      <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+      <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 AJA Engineering Consultancy | All rights reserved.</span>
+    <span><a href="#">Terms Of Use</a> &nbsp;·&nbsp; <a href="#">Privacy Policy</a></span>
+  </div>
+</footer>
+
+<script src="assets/blog-config.js"></script>
+<script>
+async function loadPost() {
+  const cfg = window.BLOG_CONFIG;
+  const params = new URLSearchParams(window.location.search);
+  const filename = params.get("post");
+  const contentEl = document.getElementById("post-content");
+
+  if (!filename) {
+    contentEl.innerHTML = "<p>No post specified.</p>";
+    return;
+  }
+
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.contentPath}/${filename}`;
+    const text = await (await fetch(rawUrl)).text();
+    const { meta, body } = splitFrontMatter(text);
+
+    document.title = (meta.title || "Blog") + " | AJA Engineering Consultancy";
+
+    contentEl.innerHTML = `
+      ${meta.image ? `<img class="cover" src="${meta.image}" alt="${escapeHtml(meta.title||'')}">` : ""}
+      <h1>${escapeHtml(meta.title || "Untitled post")}</h1>
+      <div class="post-date">${formatDate(meta.date)}</div>
+      <div class="post-body">${marked.parse(body)}</div>
+    `;
+  } catch (err) {
+    contentEl.innerHTML = "<p>Sorry, this post couldn't be loaded.</p>";
+    console.error(err);
+  }
+}
+
+function splitFrontMatter(text) {
+  const match = text.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+  const meta = {};
+  let body = text;
+  if (match) {
+    match[1].split("\n").forEach(line => {
+      const idx = line.indexOf(":");
+      if (idx === -1) return;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      val = val.replace(/^["']|["']$/g, "");
+      meta[key] = val;
+    });
+    body = match[2];
+  }
+  return { meta, body };
+}
+
+function formatDate(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+loadPost();
+</script>
+
+</body>
+</html>

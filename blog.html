@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | AJA Engineering Consultancy</title>
+<meta name="description" content="Articles and insights from AJA Engineering Consultancy on material integrity and failure analysis.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .blog-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:26px; max-width:var(--max-width); margin:0 auto; }
+  .blog-card { border:1px solid var(--grey-line); border-radius:4px; overflow:hidden; display:flex; flex-direction:column; }
+  .blog-card img { width:100%; height:180px; object-fit:cover; background:var(--grey-bg); }
+  .blog-card .body { padding:18px; flex:1; display:flex; flex-direction:column; }
+  .blog-card h3 { color:var(--blue); font-size:1.1rem; margin:0 0 6px; }
+  .blog-card .date { color:#999; font-size:0.8rem; margin-bottom:10px; }
+  .blog-card p { color:#555; font-size:0.9rem; flex:1; }
+  .blog-empty, .blog-loading { text-align:center; color:#777; padding:40px 0; }
+  @media (max-width:900px){ .blog-grid{ grid-template-columns:1fr; } }
+</style>
+<!-- Google Analytics (GA4) - replace G-XXXXXXXXXX with the real Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <img src="assets/logo.png" alt="AJA Engineering Consultancy logo" class="brand-logo">
+    <div>
+      <div class="brand-text-name">Engineering Consultancy</div>
+      <div class="brand-text-tag">Assuring material reliability</div>
+    </div>
+  </div>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="blog.html" class="active">Blog</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <button class="nav-toggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+</header>
+
+<section class="hero" style="background-image:url('assets/hero.jpg'); min-height:260px;">
+  <div class="hero-inner" style="padding:40px;">
+    <h1 style="font-size:1.9rem;">Blog</h1>
+    <p style="max-width:600px;">Insights, updates and articles from the AJA Engineering Consultancy team.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div id="blog-list" class="blog-loading">Loading posts…</div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <img src="assets/logo.png" alt="" class="brand-logo">
+      <div>
+        <div class="footer-brand-name">Engineering Consultancy</div>
+        <div class="footer-brand-tag">Assuring material reliability</div>
+      </div>
+    </div>
+    <div class="social-links">
+      <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a href="#" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+      <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+      <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 AJA Engineering Consultancy | All rights reserved.</span>
+    <span><a href="#">Terms Of Use</a> &nbsp;·&nbsp; <a href="#">Privacy Policy</a></span>
+  </div>
+</footer>
+
+<script src="assets/blog-config.js"></script>
+<script>
+async function loadPosts() {
+  const cfg = window.BLOG_CONFIG;
+  const listEl = document.getElementById("blog-list");
+  try {
+    const apiUrl = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.contentPath}?ref=${cfg.branch}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error("Could not reach GitHub (" + res.status + ")");
+    const files = await res.json();
+    const mdFiles = files.filter(f => f.name.endsWith(".md"));
+
+    if (mdFiles.length === 0) {
+      listEl.innerHTML = '<p class="blog-empty">No posts yet — check back soon.</p>';
+      return;
+    }
+
+    const posts = await Promise.all(mdFiles.map(async f => {
+      const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.contentPath}/${f.name}`;
+      const text = await (await fetch(rawUrl)).text();
+      const meta = parseFrontMatter(text);
+      meta.filename = f.name;
+      return meta;
+    }));
+
+    posts.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    listEl.className = "blog-grid";
+    listEl.innerHTML = posts.map(p => `
+      <a class="blog-card" href="blog-post.html?post=${encodeURIComponent(p.filename)}" style="text-decoration:none;color:inherit;">
+        ${p.image ? `<img src="${p.image}" alt="${escapeHtml(p.title || '')}">` : ""}
+        <div class="body">
+          <h3>${escapeHtml(p.title || "Untitled post")}</h3>
+          <div class="date">${formatDate(p.date)}</div>
+          <p>${escapeHtml(p.excerpt || "")}</p>
+        </div>
+      </a>
+    `).join("");
+  } catch (err) {
+    listEl.innerHTML = '<p class="blog-empty">Couldn\'t load posts right now. Please try again shortly.</p>';
+    console.error(err);
+  }
+}
+
+// Minimal YAML front-matter parser (handles the simple key: value pairs Decap CMS writes)
+function parseFrontMatter(text) {
+  const match = text.match(/^---\s*\n([\s\S]*?)\n---/);
+  const meta = {};
+  if (match) {
+    match[1].split("\n").forEach(line => {
+      const idx = line.indexOf(":");
+      if (idx === -1) return;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      val = val.replace(/^["']|["']$/g, "");
+      meta[key] = val;
+    });
+  }
+  return meta;
+}
+
+function formatDate(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+loadPosts();
+</script>
+
+</body>
+</html>
